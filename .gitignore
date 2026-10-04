@@ -1,0 +1,11 @@
+# Python sanal ortam ve önbellek
+venv/
+__pycache__/
+*.pyc
+
+# Ortam değişkenleri ve şifreler
+.env
+
+# IDE ve İşletim Sistemi dosyaları
+.DS_Store
+.vscode/
