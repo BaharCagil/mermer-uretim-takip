@@ -1,37 +1,32 @@
-import pyodbc
+import pymssql
 import pandas as pd
 
-# Docker üzerindeki SQL Server bağlantı bilgileri
-DB_CONFIG = {
-    'server': 'localhost,1433',
-    'database': 'MermerUretimVT',
-    'username': 'sa',
-    'password': 'Bahar_Sql_2026!',
-    'driver': '{ODBC Driver 18 for SQL Server}'
-}
+# Docker SQL Server Bağlantı Bilgileri
+SERVER = '127.0.0.1'
+PORT = 1433
+USER = 'sa'
+PASSWORD = 'Bahar_Sql_2026!'
+DATABASE = 'MermerUretimVT'  # Veritabanı adı doğrulandı
 
 def get_connection():
-    """SQL Server veritabanı bağlantısı oluşturur."""
     try:
-        conn_str = (
-            f"DRIVER={DB_CONFIG['driver']};"
-            f"SERVER={DB_CONFIG['server']};"
-            f"DATABASE={DB_CONFIG['database']};"
-            f"UID={DB_CONFIG['username']};"
-            f"PWD={DB_CONFIG['password']};"
-            "TrustServerCertificate=yes;"
+        conn = pymssql.connect(
+            server=SERVER,
+            port=PORT,
+            user=USER,
+            password=PASSWORD,
+            database=DATABASE
         )
-        return pyodbc.connect(conn_str)
+        return conn
     except Exception as e:
         print(f"Veritabanı bağlantı hatası: {e}")
         return None
 
-def run_query(query, params=None):
-    """SQL SELECT sorgularını çalıştırıp Pandas DataFrame olarak döner."""
+def run_query(query):
     conn = get_connection()
     if conn:
         try:
-            df = pd.read_sql(query, conn, params=params)
+            df = pd.read_sql(query, conn)
             conn.close()
             return df
         except Exception as e:
@@ -41,12 +36,13 @@ def run_query(query, params=None):
     return pd.DataFrame()
 
 def execute_sp(sp_name, params):
-    """Saklı Yordamları (Stored Procedure) çalıştırır."""
     conn = get_connection()
     if conn:
         try:
             cursor = conn.cursor()
-            cursor.execute(f"EXEC {sp_name} " + ", ".join(["?"] * len(params)), params)
+            placeholders = ", ".join(["%s"] * len(params))
+            query = f"EXEC {sp_name} {placeholders}"
+            cursor.execute(query, tuple(params))
             conn.commit()
             conn.close()
             return True
@@ -56,9 +52,8 @@ def execute_sp(sp_name, params):
             return False
     return False
 
-# Bağlantıyı test et
 if __name__ == '__main__':
-    print("Veritabanı bağlantısı test ediliyor...")
+    print("MermerUretimVT veritabanına bağlanılıyor...")
     test_df = run_query("SELECT * FROM Bloklar")
-    print("Bağlantı Başarılı! Bloklar Tablosu:")
+    print("\n--- Bloklar Tablosu ---")
     print(test_df)
